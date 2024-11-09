@@ -9,6 +9,5 @@ add_compile_options(-Wall -Wextra -Wpedantic -g -fno-omit-frame-pointer)
 
 # Turn warnings into errors
 # add_compile_options(-Werror -Wno-language-extension-token)
-add_compile_options(-Werror -Wno-language-extension-token)
 
 message(STATUS "C++ standard: ${CMAKE_CXX_STANDARD}")
