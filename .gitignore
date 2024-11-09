@@ -2,6 +2,7 @@ build/
 .idea
 .vscode
 .DS_Store
+.ccache/
 
 third_party/*
 !third_party/CMakeLists.txt
