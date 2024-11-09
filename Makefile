@@ -23,11 +23,12 @@ build: build/CMakeCache.txt
 	@cmake --build build -j $(NPROCS) --target server-$(target)
 
 target ?= undefined
+port ?= undefined
 
 .PHONY: run
 # Usage: make run target=fibers
 run:
-	@build/server/$(target)/server-$(target)
+	@build/server/$(target)/server-$(target) $(port)
 
 .PHONY: clean
 clean:
