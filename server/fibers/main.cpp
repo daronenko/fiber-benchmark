@@ -1,75 +1,76 @@
-#include <asio/ts/buffer.hpp>
-#include <asio/ts/internet.hpp>
-
+#include <fiber/sync/wait_group.hpp>
 #include <fiber/sched/thread_pool.hpp>
 #include <fiber/core/sched/go.hpp>
-#include <fiber/sync/wait_group.hpp>
+
+#include <boost/asio.hpp>
+#include <boost/beast.hpp>
 
 #include <iostream>
-#include <utility>
+#include <string>
 #include <thread>
 
-using asio::ip::tcp;
 using namespace fiber;
 
+namespace asio = boost::asio;
+namespace beast = boost::beast;
+using tcp = asio::ip::tcp;
+
 void handle_client(tcp::socket socket) {
-  static const size_t max_length = 1024;
+    try {
+        beast::flat_buffer buffer;
+        beast::http::request<beast::http::string_body> req;
 
-  try {
-    for (;;) {
-      char data[max_length];
+        beast::http::read(socket, buffer, req);
 
-      std::error_code error;
-      size_t length = socket.read_some(asio::buffer(data), error);
+        beast::http::response<beast::http::string_body> res{
+            beast::http::status::ok, req.version()};
+        res.set(beast::http::field::server, "FiberServer");
+        res.set(beast::http::field::content_type, "text/plain");
+        res.body() = "OK";
+        res.prepare_payload();
 
-      if (error == asio::stream_errc::eof) {
-        break;
-      } else if (error) {
-        throw std::system_error(error);
-      }
+        beast::http::write(socket, res);
 
-      asio::write(socket, asio::buffer(data, length));
+    } catch (const std::exception& e) {
+        std::cerr << "Exception in fiber: " << e.what() << std::endl;
     }
-  } catch (std::exception& e) {
-    std::cerr << "Exception in thread: " << e.what() << std::endl;
-  }
 }
 
-[[noreturn]] void server(asio::io_context& io_context, unsigned short port,
-                         sched::ThreadPool& pool) {
-  tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), port));
-  std::cerr << "Server is listening on port " << port << "..." << std::endl;
+[[noreturn]] void server(asio::io_context& io_context, fiber::sched::ThreadPool& pool, unsigned short port) {
+    tcp::acceptor acceptor(io_context, tcp::endpoint(tcp::v4(), port));
+    std::cerr << "Server is listening on port " << port << "..." << std::endl;
 
-  while (true) {
-    tcp::socket socket(io_context);
-    acceptor.accept(socket);
-    Go(pool, [socket = std::move(socket)]() mutable {
-      handle_client(std::move(socket));
-    });
-  }
+    for (;;) {
+        tcp::socket socket(io_context);
+        acceptor.accept(socket);
+
+        Go(pool, [sock = std::move(socket)]() mutable {
+            handle_client(std::move(sock));
+        });
+    }
 }
 
 int main(int argc, char* argv[]) {
-  try {
-    if (argc != 2) {
-      std::cerr << "Usage: ./server-threads <port>" << std::endl;
-      return 1;
+    try {
+        if (argc != 2) {
+            std::cerr << "Usage: ./server-http <port>" << std::endl;
+            return 1;
+        }
+
+        unsigned short port = static_cast<unsigned short>(std::atoi(argv[1]));
+
+        asio::io_context io_context;
+
+        const size_t kThreads = std::thread::hardware_concurrency();
+        fiber::sched::ThreadPool pool{kThreads};
+        
+        pool.Start();
+        server(io_context, pool, port);
+        pool.Stop();
+
+    } catch (const std::exception& e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
     }
 
-    uint16_t port = std::atoi(argv[1]);
-
-    asio::io_context io_context;
-
-    const size_t kThreads = 4;
-    sched::ThreadPool pool{kThreads};
-
-    pool.Start();
-    server(io_context, port, pool);
-    pool.Stop();
-
-  } catch (std::exception& e) {
-    std::cerr << "Exception: " << e.what() << std::endl;
-  }
-
-  return 0;
+    return 0;
 }
