@@ -2,7 +2,7 @@ PROJECT_NAME ?= fiber-benchmark
 
 CMAKE_COMMON_FLAGS ?= -DCMAKE_EXPORT_COMPILE_COMMANDS=1
 # Available sanitizers: UBSAN, ASAN, TSAN
-CMAKE_FLAGS ?= -DUBSAN=ON -DASAN=ON
+CMAKE_FLAGS ?=
 NPROCS ?= $(shell nproc)
 
 CLANG_FORMAT ?= clang-format
