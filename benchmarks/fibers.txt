@@ -4,6 +4,6 @@ Running 30s test @ http://127.0.0.1:8080
     Latency    55.80ms   95.10ms   1.05s    97.03%
     Req/Sec   400.50    240.12   850.00     60.35%
   16750 requests in 30.06s, 1.39MB read
-  Socket errors: connect 0, read 16251, write 115, timeout 72
+  Socket errors: connect 0, read 28, write 115, timeout 72
 Requests/sec:    557.12
 Transfer/sec:     46.20KB
